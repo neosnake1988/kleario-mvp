@@ -1,0 +1,166 @@
+# KlearIO MVP Scope
+
+## Product vision
+
+KlearIO helps users organize administrative documents without having to manually rename, classify, and search through files.
+
+The product should feel simple, clear, and calm.
+
+The user should not need to understand document management, OCR, AI, folders, metadata, or classification logic.
+
+## MVP problem
+
+People receive many administrative documents and often do not know how to name them, where to store them, or how to find them later.
+
+The MVP must solve this basic problem:
+
+> I upload a document, KlearIO understands what it is, renames it, classifies it, and makes it searchable.
+
+## MVP user promise
+
+For the MVP, KlearIO should be able to:
+
+- Accept a document upload
+- Read the document content
+- Identify the document type
+- Extract a few important fields
+- Propose a clear file name
+- Propose a logical folder
+- Store the document
+- Allow simple search
+
+## Primary user journey
+
+1. The user opens KlearIO
+2. The user uploads a document
+3. KlearIO processes the document
+4. KlearIO displays the result
+5. The user sees the detected document type
+6. The user sees the extracted fields
+7. The user sees the proposed name and folder
+8. The user validates or corrects the result
+9. The document is saved
+10. The user can find it later through search
+
+## MVP input formats
+
+The MVP should support:
+
+- PDF files
+- Image files if OCR is enabled
+- Word files later if simple enough
+
+For the first prototype, PDF support is enough.
+
+## MVP output
+
+For each uploaded document, KlearIO should produce:
+
+- Original file
+- Extracted text
+- Document type
+- Key fields
+- Proposed file name
+- Proposed folder
+- Processing status
+- Creation date
+- Update date
+
+## Example output
+
+    {
+      "document_type": "invoice",
+      "issuer": "EDF",
+      "document_date": "2026-05-12",
+      "amount": "82.45",
+      "proposed_file_name": "2026-05-12_EDF_invoice_82-45.pdf",
+      "proposed_folder": "Finance/Invoices/EDF",
+      "status": "processed"
+    }
+
+## MVP document types
+
+The first version may support a limited list:
+
+- Invoice
+- Insurance document
+- Tax document
+- Bank document
+- Payslip
+- Administrative letter
+- Contract
+
+The first technical prototype can start with invoices only if needed.
+
+## Detection strategy
+
+The MVP should start with simple and understandable rules.
+
+Example rules:
+
+- If the document contains "facture", "invoice", "total TTC", or "amount due", classify it as invoice
+- If the document contains "avis d'imposition" or "impôt", classify it as tax document
+- If the document contains "assurance", "contrat d'assurance", or "attestation", classify it as insurance document
+
+AI can be added later if rule-based detection becomes too limited.
+
+## Extraction strategy
+
+The MVP should extract only useful fields.
+
+Examples:
+
+- Issuer
+- Date
+- Amount
+- Reference number
+- Recipient name
+- Due date
+- Contract number
+
+The MVP does not need perfect extraction at first.
+
+It needs a clear flow where the user can understand and correct the result.
+
+## UX principles
+
+The interface should be:
+
+- Simple
+- Minimal
+- Reassuring
+- Fast to understand
+- Clear about what was detected
+- Clear when confidence is low
+- Easy to correct
+
+The user should never feel trapped by an automatic decision.
+
+## MVP success criteria
+
+The MVP is successful if:
+
+- A user can upload a PDF
+- The document is stored
+- Text is extracted
+- A document type is proposed
+- A file name is proposed
+- A folder is proposed
+- The result can be corrected
+- The document can be found later
+
+## Explicitly out of scope
+
+The MVP does not include:
+
+- Bank connection
+- Email connection
+- Registered mail
+- Legal advice
+- Tax advice
+- Medical document workflows
+- Electronic signature
+- Enterprise validation workflow
+- Multi-tenant SaaS complexity
+- Advanced agentic architecture
+- Complex memory system
