@@ -67,7 +67,7 @@ The MVP will start with a simple local-first architecture:
 
 ## Current status
 
-Project initialization.
+The repository now contains a first local prototype skeleton.
 
 The first objective is to build a simple end-to-end prototype where a user can upload one document and receive:
 
@@ -76,3 +76,43 @@ The first objective is to build a simple end-to-end prototype where a user can u
 - A proposed file name
 - A proposed folder
 - A searchable record
+
+## Local development
+
+### Backend
+
+From the repository root:
+
+```powershell
+cd app\backend
+python -m pip install -r requirements.txt
+python -m uvicorn main:app --reload
+```
+
+The backend runs on `http://localhost:8000` by default.
+
+Local files are stored under `app/backend/storage/originals`.
+The SQLite database is stored under `app/backend/data/kleario.sqlite3`.
+
+### Frontend
+
+From the repository root:
+
+```powershell
+cd app\frontend
+npm install
+npm run dev
+```
+
+The frontend runs on `http://localhost:3000` by default and calls the backend
+at `http://localhost:8000`. This can be changed with `NEXT_PUBLIC_API_BASE_URL`.
+
+## Current prototype limits
+
+- Only PDF upload is supported.
+- Only text-based PDFs are supported; scanned PDFs need OCR, which is not part of this step.
+- Document detection uses simple keyword rules.
+- Field extraction uses approximate regex rules.
+- Proposed file names and folders are stored as metadata only.
+- Files are not physically renamed or moved into the proposed folder yet.
+- There is no authentication, cloud storage, agentic workflow, or microservice architecture.

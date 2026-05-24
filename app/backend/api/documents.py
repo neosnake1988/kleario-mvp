@@ -1,0 +1,79 @@
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from database.db import create_document, get_document, list_documents, search_documents
+from services.document_detection import detect_document_type
+from services.field_extraction import extract_fields
+from services.file_storage import save_upload_file
+from services.naming import build_proposed_file_name, build_proposed_folder
+from services.text_extraction import PdfTextExtractionError, extract_text_from_pdf
+
+
+router = APIRouter(prefix="/documents", tags=["documents"])
+
+
+@router.post("/upload")
+async def upload_document(file: UploadFile = File(...)) -> dict:
+    file_name = file.filename or ""
+    has_pdf_extension = file_name.lower().endswith(".pdf")
+    has_pdf_content_type = file.content_type in (None, "", "application/pdf")
+    if not has_pdf_extension or not has_pdf_content_type:
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    stored_file = await save_upload_file(file)
+    try:
+        extracted_text = extract_text_from_pdf(stored_file.path)
+    except PdfTextExtractionError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="The PDF is invalid or could not be read.",
+        ) from exc
+
+    document_type = detect_document_type(extracted_text)
+    fields = extract_fields(extracted_text)
+    proposed_file_name = build_proposed_file_name(
+        document_type=document_type,
+        original_file_name=stored_file.original_file_name,
+        issuer=fields.get("issuer"),
+        document_date=fields.get("document_date"),
+        amount=fields.get("amount"),
+    )
+    proposed_folder = build_proposed_folder(
+        document_type=document_type,
+        issuer=fields.get("issuer"),
+    )
+
+    return create_document(
+        {
+            "original_file_name": stored_file.original_file_name,
+            "stored_file_path": str(stored_file.path),
+            "mime_type": file.content_type or "application/pdf",
+            "file_size": stored_file.file_size,
+            "extracted_text": extracted_text,
+            "document_type": document_type,
+            "issuer": fields.get("issuer"),
+            "document_date": fields.get("document_date"),
+            "amount": fields.get("amount"),
+            "reference_number": fields.get("reference_number"),
+            "proposed_file_name": proposed_file_name,
+            "proposed_folder": proposed_folder,
+            "status": "processed",
+        }
+    )
+
+
+@router.get("")
+def get_documents() -> list[dict]:
+    return list_documents()
+
+
+@router.get("/search")
+def search(q: str) -> list[dict]:
+    return search_documents(q)
+
+
+@router.get("/{document_id}")
+def get_document_by_id(document_id: int) -> dict:
+    document = get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return document

@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+node_modules/
+.next/
+out/
+
+app/backend/data/
+app/backend/storage/
