@@ -74,6 +74,25 @@ def get_document(document_id: int) -> dict | None:
     return dict(row) if row else None
 
 
+def update_document_metadata(document_id: int, data: dict[str, Any]) -> dict | None:
+    if not data:
+        return get_document(document_id)
+
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {**data, "updated_at": now}
+    assignments = ", ".join(f"{field} = ?" for field in payload)
+
+    with get_connection() as connection:
+        cursor = connection.execute(
+            f"UPDATE documents SET {assignments} WHERE id = ?",
+            [*payload.values(), document_id],
+        )
+        if cursor.rowcount == 0:
+            return None
+
+    return get_document(document_id)
+
+
 def search_documents(query: str) -> list[dict]:
     like_query = f"%{query.strip()}%"
     with get_connection() as connection:

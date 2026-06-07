@@ -1,8 +1,16 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from typing import Any
+
+from fastapi import APIRouter, Body, File, HTTPException, UploadFile
 
 from api.errors import api_error
 from config import MAX_UPLOAD_SIZE_BYTES
-from database.db import create_document, get_document, list_documents, search_documents
+from database.db import (
+    create_document,
+    get_document,
+    list_documents,
+    search_documents,
+    update_document_metadata,
+)
 from services.document_detection import detect_document_type
 from services.field_extraction import extract_fields
 from services.file_storage import delete_stored_file, save_upload_file
@@ -11,6 +19,16 @@ from services.text_extraction import PdfTextExtractionError, extract_text_from_p
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+ALLOWED_METADATA_FIELDS = {
+    "document_type",
+    "issuer",
+    "document_date",
+    "amount",
+    "reference_number",
+    "proposed_file_name",
+    "proposed_folder",
+    "status",
+}
 
 
 def to_public_document(document: dict) -> dict:
@@ -105,6 +123,25 @@ def get_documents() -> list[dict]:
 @router.get("/search")
 def search(q: str) -> list[dict]:
     return [to_public_document(document) for document in search_documents(q)]
+
+
+@router.patch("/{document_id}/metadata")
+def patch_document_metadata(
+    document_id: int,
+    data: dict[str, Any] = Body(...),
+) -> dict:
+    invalid_fields = sorted(set(data) - ALLOWED_METADATA_FIELDS)
+    if invalid_fields:
+        raise api_error(
+            400,
+            "INVALID_METADATA_FIELD",
+            f"Unsupported metadata field: {invalid_fields[0]}",
+        )
+
+    document = update_document_metadata(document_id, data)
+    if document is None:
+        raise api_error(404, "DOCUMENT_NOT_FOUND", "Document not found")
+    return to_public_document(document)
 
 
 @router.get("/{document_id}")

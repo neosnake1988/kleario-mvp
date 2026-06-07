@@ -132,6 +132,67 @@ def test_get_document_returns_structured_not_found_error(client):
     assert_api_error(response, "DOCUMENT_NOT_FOUND", "Document not found")
 
 
+def test_updates_document_metadata(client, tmp_path):
+    document = upload_invoice(client, tmp_path)
+
+    response = client.patch(
+        f"/documents/{document['id']}/metadata",
+        json={
+            "document_type": "tax_document",
+            "issuer": "Tax Office",
+            "document_date": "2026-06-01",
+            "amount": "120.00",
+            "reference_number": "TAX-456",
+            "proposed_file_name": "2026-06-01_Tax_Office_tax_document_120-00.pdf",
+            "proposed_folder": "Administration/Taxes",
+            "status": "reviewed",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["document_type"] == "tax_document"
+    assert payload["issuer"] == "Tax Office"
+    assert payload["document_date"] == "2026-06-01"
+    assert payload["amount"] == "120.00"
+    assert payload["reference_number"] == "TAX-456"
+    assert (
+        payload["proposed_file_name"]
+        == "2026-06-01_Tax_Office_tax_document_120-00.pdf"
+    )
+    assert payload["proposed_folder"] == "Administration/Taxes"
+    assert payload["status"] == "reviewed"
+    assert "stored_file_path" not in payload
+    assert "extracted_text" not in payload
+
+
+def test_update_document_metadata_returns_not_found(client):
+    response = client.patch(
+        "/documents/999/metadata",
+        json={"issuer": "Tax Office"},
+    )
+
+    assert response.status_code == 404
+    assert_api_error(response, "DOCUMENT_NOT_FOUND", "Document not found")
+
+
+def test_update_document_metadata_rejects_internal_fields(client, tmp_path):
+    document = upload_invoice(client, tmp_path)
+
+    for field in ("stored_file_path", "extracted_text"):
+        response = client.patch(
+            f"/documents/{document['id']}/metadata",
+            json={field: "internal value"},
+        )
+
+        assert response.status_code == 400
+        assert_api_error(
+            response,
+            "INVALID_METADATA_FIELD",
+            f"Unsupported metadata field: {field}",
+        )
+
+
 def test_search_documents(client, tmp_path):
     pdf_path = tmp_path / "invoice.pdf"
     create_pdf(pdf_path, "EDF\nFacture\nTotal TTC: 82,45")
@@ -189,6 +250,23 @@ def create_empty_pdf(path: Path) -> None:
     document.new_page()
     document.save(path)
     document.close()
+
+
+def upload_invoice(client, tmp_path) -> dict:
+    pdf_path = tmp_path / "invoice.pdf"
+    create_pdf(
+        pdf_path,
+        "EDF\nFacture\nDate: 2026-05-12\nTotal TTC: 82,45\nReference: INV-123",
+    )
+
+    with pdf_path.open("rb") as pdf:
+        response = client.post(
+            "/documents/upload",
+            files={"file": ("invoice.pdf", pdf, "application/pdf")},
+        )
+
+    assert response.status_code == 200
+    return response.json()
 
 
 def assert_api_error(response, code: str, message: str) -> None:
