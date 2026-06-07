@@ -77,6 +77,12 @@ The first objective is to build a simple end-to-end prototype where a user can u
 - A proposed folder
 - A searchable record
 
+## Architecture docs
+
+- `docs/technical/application-architecture.md`
+- `docs/technical/current-mvp-flow.md`
+- `docs/technical/maintainability.md`
+
 ## Local development
 
 ### Backend

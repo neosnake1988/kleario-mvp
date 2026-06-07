@@ -43,3 +43,39 @@ The first goal is to validate the core document upload, classification, extracti
 The MVP will not use a full agentic architecture at the beginning.
 
 Agentic logic may be introduced later if the product flow is validated.
+
+## 2026-06-07 - Consolidate the MVP architecture as a modular monolith
+
+### Context
+
+The local prototype can upload PDFs, extract text, classify documents, extract key
+fields, propose names and folders, store files locally, and save records in SQLite.
+Before adding more features, the project needs clear architecture rules that keep
+the code understandable and ready for gradual cloud evolution.
+
+### Decision
+
+Keep the MVP and V1 as a modular monolith:
+
+- FastAPI backend with simple modules;
+- Next.js frontend with limited fragmentation;
+- SQLite first, with PostgreSQL as the likely future production database;
+- local file storage first, with Azure Blob Storage as the likely future object
+  storage target;
+- synchronous PDF processing for now, with background workers introduced only when
+  processing time, retries, or reliability require them.
+
+Do not introduce microservices, Kubernetes, or a full event-driven architecture for
+the MVP.
+
+### Rationale
+
+The current product loop is small enough to keep in one application. A modular
+monolith keeps development, testing, debugging, and review simple while preserving
+clear replacement points for database, storage, security, and processing changes.
+
+### Consequences
+
+Architecture work should focus on clear module boundaries, human maintainability,
+document privacy, understandable errors, and progressive hardening. Future cloud
+work should extend these boundaries instead of replacing the whole application.
