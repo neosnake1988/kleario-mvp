@@ -1,5 +1,6 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
+from api.errors import api_error
 from config import MAX_UPLOAD_SIZE_BYTES
 from database.db import create_document, get_document, list_documents, search_documents
 from services.document_detection import detect_document_type
@@ -35,14 +36,15 @@ async def upload_document(file: UploadFile = File(...)) -> dict:
     has_pdf_extension = file_name.lower().endswith(".pdf")
     has_pdf_content_type = file.content_type in (None, "", "application/pdf")
     if not has_pdf_extension or not has_pdf_content_type:
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+        raise api_error(400, "INVALID_FILE_TYPE", "Only PDF files are supported")
 
     stored_file = await save_upload_file(file)
     try:
         if stored_file.file_size > MAX_UPLOAD_SIZE_BYTES:
-            raise HTTPException(
-                status_code=413,
-                detail="PDF file is too large. Maximum size is 10 MB.",
+            raise api_error(
+                413,
+                "PDF_TOO_LARGE",
+                "PDF file is too large. Maximum size is 10 MB.",
             )
 
         extracted_text = extract_text_from_pdf(stored_file.path)
@@ -80,19 +82,17 @@ async def upload_document(file: UploadFile = File(...)) -> dict:
         )
     except PdfTextExtractionError as exc:
         delete_stored_file(stored_file)
-        raise HTTPException(
-            status_code=400,
-            detail="The PDF is invalid or could not be read.",
+        raise api_error(
+            400,
+            "PDF_TEXT_EXTRACTION_FAILED",
+            "The PDF is invalid or could not be read.",
         ) from exc
     except HTTPException:
         delete_stored_file(stored_file)
         raise
     except Exception as exc:
         delete_stored_file(stored_file)
-        raise HTTPException(
-            status_code=500,
-            detail="The PDF could not be processed.",
-        ) from exc
+        raise api_error(500, "INTERNAL_ERROR", "The PDF could not be processed.") from exc
 
     return to_public_document(document)
 
@@ -111,5 +111,5 @@ def search(q: str) -> list[dict]:
 def get_document_by_id(document_id: int) -> dict:
     document = get_document(document_id)
     if document is None:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise api_error(404, "DOCUMENT_NOT_FOUND", "Document not found")
     return to_public_document(document)

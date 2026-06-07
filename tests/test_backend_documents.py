@@ -68,6 +68,7 @@ def test_rejects_non_pdf(client):
     )
 
     assert response.status_code == 400
+    assert_api_error(response, "INVALID_FILE_TYPE", "Only PDF files are supported")
 
 
 def test_rejects_pdf_without_readable_text(client, tmp_path):
@@ -81,6 +82,11 @@ def test_rejects_pdf_without_readable_text(client, tmp_path):
         )
 
     assert response.status_code == 400
+    assert_api_error(
+        response,
+        "PDF_TEXT_EXTRACTION_FAILED",
+        "The PDF is invalid or could not be read.",
+    )
     assert list((tmp_path / "storage" / "originals").iterdir()) == []
 
 
@@ -95,7 +101,11 @@ def test_rejects_pdf_over_10_mb_and_removes_stored_file(client, tmp_path):
         )
 
     assert response.status_code == 413
-    assert response.json()["detail"] == "PDF file is too large. Maximum size is 10 MB."
+    assert_api_error(
+        response,
+        "PDF_TOO_LARGE",
+        "PDF file is too large. Maximum size is 10 MB.",
+    )
     assert list((tmp_path / "storage" / "originals").iterdir()) == []
 
 
@@ -111,8 +121,15 @@ def test_removes_stored_file_when_database_write_fails(client, tmp_path):
             )
 
     assert response.status_code == 500
-    assert response.json()["detail"] == "The PDF could not be processed."
+    assert_api_error(response, "INTERNAL_ERROR", "The PDF could not be processed.")
     assert list((tmp_path / "storage" / "originals").iterdir()) == []
+
+
+def test_get_document_returns_structured_not_found_error(client):
+    response = client.get("/documents/999")
+
+    assert response.status_code == 404
+    assert_api_error(response, "DOCUMENT_NOT_FOUND", "Document not found")
 
 
 def test_search_documents(client, tmp_path):
@@ -172,3 +189,12 @@ def create_empty_pdf(path: Path) -> None:
     document.new_page()
     document.save(path)
     document.close()
+
+
+def assert_api_error(response, code: str, message: str) -> None:
+    assert response.json()["detail"] == {
+        "error": {
+            "code": code,
+            "message": message,
+        }
+    }
