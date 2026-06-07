@@ -9,3 +9,4 @@ out/
 
 app/backend/data/
 app/backend/storage/
+pytest-basetemp/
