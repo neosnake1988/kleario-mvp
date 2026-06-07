@@ -16,6 +16,19 @@ type DocumentRecord = {
   created_at: string;
 };
 
+type MetadataForm = {
+  document_type: string;
+  issuer: string;
+  document_date: string;
+  amount: string;
+  reference_number: string;
+  proposed_file_name: string;
+  proposed_folder: string;
+  status: string;
+};
+
+type MetadataField = keyof MetadataForm;
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -25,6 +38,11 @@ export default function Home() {
   const [latestResult, setLatestResult] = useState<DocumentRecord | null>(null);
   const [query, setQuery] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingDocumentId, setEditingDocumentId] = useState<number | null>(
+    null,
+  );
+  const [editForm, setEditForm] = useState<MetadataForm | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const visibleDocuments = useMemo(() => documents, [documents]);
@@ -93,6 +111,62 @@ export default function Home() {
     setDocuments(await response.json());
   }
 
+  function startEditing(document: DocumentRecord) {
+    setError(null);
+    setEditingDocumentId(document.id);
+    setEditForm(toEditForm(document));
+  }
+
+  function cancelEditing() {
+    setEditingDocumentId(null);
+    setEditForm(null);
+    setIsSaving(false);
+  }
+
+  function updateEditField(field: MetadataField, value: string) {
+    setEditForm((current) =>
+      current ? { ...current, [field]: value } : current,
+    );
+  }
+
+  async function saveMetadata(documentId: number) {
+    if (!editForm) {
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    const response = await fetch(
+      `${API_BASE_URL}/documents/${documentId}/metadata`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toMetadataPayload(editForm)),
+      },
+    );
+
+    setIsSaving(false);
+
+    if (!response.ok) {
+      setError(
+        await getApiErrorMessage(response, "Metadata could not be saved."),
+      );
+      return;
+    }
+
+    const updatedDocument = (await response.json()) as DocumentRecord;
+    setDocuments((current) =>
+      current.map((document) =>
+        document.id === updatedDocument.id ? updatedDocument : document,
+      ),
+    );
+    setLatestResult((current) =>
+      current?.id === updatedDocument.id ? updatedDocument : current,
+    );
+    cancelEditing();
+  }
+
   return (
     <main className="page">
       <section className="header">
@@ -159,7 +233,24 @@ export default function Home() {
             KlearIO has proposed a file name and folder. The file has not been
             physically renamed or moved yet.
           </p>
-          <DocumentDetails document={latestResult} />
+          {editingDocumentId === latestResult.id && editForm ? (
+            <MetadataEditForm
+              form={editForm}
+              isSaving={isSaving}
+              onCancel={cancelEditing}
+              onChange={updateEditField}
+              onSave={() => void saveMetadata(latestResult.id)}
+            />
+          ) : (
+            <>
+              <DocumentDetails document={latestResult} />
+              <div className="metadata-actions">
+                <button type="button" onClick={() => startEditing(latestResult)}>
+                  Edit
+                </button>
+              </div>
+            </>
+          )}
         </section>
       ) : null}
 
@@ -172,7 +263,26 @@ export default function Home() {
           {visibleDocuments.map((document) => (
             <article className="document-card" key={document.id}>
               <h3>{document.proposed_file_name}</h3>
-              <DocumentDetails document={document} compact />
+              {editingDocumentId === document.id &&
+              latestResult?.id !== document.id &&
+              editForm ? (
+                <MetadataEditForm
+                  form={editForm}
+                  isSaving={isSaving}
+                  onCancel={cancelEditing}
+                  onChange={updateEditField}
+                  onSave={() => void saveMetadata(document.id)}
+                />
+              ) : (
+                <>
+                  <DocumentDetails document={document} compact />
+                  <div className="metadata-actions">
+                    <button type="button" onClick={() => startEditing(document)}>
+                      Edit
+                    </button>
+                  </div>
+                </>
+              )}
             </article>
           ))}
           {visibleDocuments.length === 0 ? (
@@ -181,6 +291,109 @@ export default function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+function MetadataEditForm({
+  form,
+  isSaving,
+  onCancel,
+  onChange,
+  onSave,
+}: {
+  form: MetadataForm;
+  isSaving: boolean;
+  onCancel: () => void;
+  onChange: (field: MetadataField, value: string) => void;
+  onSave: () => void;
+}) {
+  return (
+    <form
+      className="metadata-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave();
+      }}
+    >
+      <MetadataInput
+        field="document_type"
+        label="Document type"
+        value={form.document_type}
+        onChange={onChange}
+      />
+      <MetadataInput
+        field="issuer"
+        label="Issuer"
+        value={form.issuer}
+        onChange={onChange}
+      />
+      <MetadataInput
+        field="document_date"
+        label="Document date"
+        value={form.document_date}
+        onChange={onChange}
+      />
+      <MetadataInput
+        field="amount"
+        label="Amount"
+        value={form.amount}
+        onChange={onChange}
+      />
+      <MetadataInput
+        field="reference_number"
+        label="Reference number"
+        value={form.reference_number}
+        onChange={onChange}
+      />
+      <MetadataInput
+        field="proposed_file_name"
+        label="Suggested file name"
+        value={form.proposed_file_name}
+        onChange={onChange}
+      />
+      <MetadataInput
+        field="proposed_folder"
+        label="Suggested folder"
+        value={form.proposed_folder}
+        onChange={onChange}
+      />
+      <MetadataInput
+        field="status"
+        label="Status"
+        value={form.status}
+        onChange={onChange}
+      />
+      <div className="metadata-actions">
+        <button disabled={isSaving} type="submit">
+          {isSaving ? "Saving..." : "Save"}
+        </button>
+        <button disabled={isSaving} type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function MetadataInput({
+  field,
+  label,
+  value,
+  onChange,
+}: {
+  field: MetadataField;
+  label: string;
+  value: string;
+  onChange: (field: MetadataField, value: string) => void;
+}) {
+  return (
+    <label>
+      <span>{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(field, event.target.value)}
+      />
+    </label>
   );
 }
 
@@ -231,6 +444,37 @@ function DocumentDetails({
 
 function formatValue(value: string | null) {
   return value?.trim() ? value : "Not detected";
+}
+
+function toEditForm(document: DocumentRecord): MetadataForm {
+  return {
+    document_type: document.document_type,
+    issuer: document.issuer ?? "",
+    document_date: document.document_date ?? "",
+    amount: document.amount ?? "",
+    reference_number: document.reference_number ?? "",
+    proposed_file_name: document.proposed_file_name,
+    proposed_folder: document.proposed_folder,
+    status: document.status,
+  };
+}
+
+function toMetadataPayload(form: MetadataForm) {
+  return {
+    document_type: form.document_type.trim(),
+    issuer: optionalValue(form.issuer),
+    document_date: optionalValue(form.document_date),
+    amount: optionalValue(form.amount),
+    reference_number: optionalValue(form.reference_number),
+    proposed_file_name: form.proposed_file_name.trim(),
+    proposed_folder: form.proposed_folder.trim(),
+    status: form.status.trim(),
+  };
+}
+
+function optionalValue(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
 }
 
 async function getApiErrorMessage(response: Response, fallback: string) {
