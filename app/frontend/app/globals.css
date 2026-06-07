@@ -138,6 +138,33 @@ h3 {
   margin: 20px 0;
 }
 
+.result-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.result-heading h2 {
+  margin-bottom: 0;
+}
+
+.result-heading span {
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 10px;
+}
+
+.result-note {
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .documents {
   margin-top: 28px;
 }

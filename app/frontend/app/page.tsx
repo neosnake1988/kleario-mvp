@@ -64,7 +64,9 @@ export default function Home() {
     setIsUploading(false);
 
     if (!response.ok) {
-      setError("The PDF could not be processed.");
+      setError(
+        await getApiErrorMessage(response, "The PDF could not be processed."),
+      );
       return;
     }
 
@@ -85,7 +87,7 @@ export default function Home() {
 
     const response = await fetch(url);
     if (!response.ok) {
-      setError("Search failed.");
+      setError(await getApiErrorMessage(response, "Search failed."));
       return;
     }
     setDocuments(await response.json());
@@ -146,7 +148,17 @@ export default function Home() {
 
       {latestResult ? (
         <section className="result">
-          <h2>Latest result</h2>
+          <div className="result-heading">
+            <div>
+              <p className="eyebrow">Processing result</p>
+              <h2>Suggested classification</h2>
+            </div>
+            <span>{latestResult.status}</span>
+          </div>
+          <p className="result-note">
+            KlearIO has proposed a file name and folder. The file has not been
+            physically renamed or moved yet.
+          </p>
           <DocumentDetails document={latestResult} />
         </section>
       ) : null}
@@ -182,33 +194,50 @@ function DocumentDetails({
   return (
     <dl className={compact ? "details compact" : "details"}>
       <div>
-        <dt>Type</dt>
-        <dd>{document.document_type}</dd>
+        <dt>Document type</dt>
+        <dd>{formatValue(document.document_type)}</dd>
       </div>
       <div>
         <dt>Issuer</dt>
-        <dd>{document.issuer ?? "Unknown"}</dd>
+        <dd>{formatValue(document.issuer)}</dd>
       </div>
       <div>
-        <dt>Date</dt>
-        <dd>{document.document_date ?? "Unknown"}</dd>
+        <dt>Document date</dt>
+        <dd>{formatValue(document.document_date)}</dd>
       </div>
       <div>
         <dt>Amount</dt>
-        <dd>{document.amount ?? "Unknown"}</dd>
+        <dd>{formatValue(document.amount)}</dd>
       </div>
       <div>
-        <dt>Reference</dt>
-        <dd>{document.reference_number ?? "Unknown"}</dd>
+        <dt>Reference number</dt>
+        <dd>{formatValue(document.reference_number)}</dd>
       </div>
       <div>
-        <dt>Folder</dt>
-        <dd>{document.proposed_folder}</dd>
+        <dt>Suggested file name</dt>
+        <dd>{formatValue(document.proposed_file_name)}</dd>
+      </div>
+      <div>
+        <dt>Suggested folder</dt>
+        <dd>{formatValue(document.proposed_folder)}</dd>
       </div>
       <div>
         <dt>Status</dt>
-        <dd>{document.status}</dd>
+        <dd>{formatValue(document.status)}</dd>
       </div>
     </dl>
   );
+}
+
+function formatValue(value: string | null) {
+  return value?.trim() ? value : "Not detected";
+}
+
+async function getApiErrorMessage(response: Response, fallback: string) {
+  try {
+    const payload = await response.json();
+    return payload?.detail?.error?.message ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
