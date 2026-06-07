@@ -10,12 +10,9 @@ platform.
 
 ## Architecture Style
 
-The MVP and V1 use a modular monolith:
-
-- one FastAPI backend;
-- one Next.js frontend;
-- one local SQLite database;
-- one local file storage area.
+The MVP starts with SQLite and local file storage.
+The V1 should remain a modular monolith, but can move to PostgreSQL and object storage.
+V1 cloud-readiness does not mean adding microservices or forcing local-only storage.
 
 Microservices, Kubernetes, and a full event-driven architecture are intentionally
 out of scope for the MVP.
@@ -71,14 +68,29 @@ KlearIO handles private administrative documents. The MVP is local and has no
 authentication, but future architecture must prepare for:
 
 - authentication;
-- document access control;
+- authorization and document access control;
+- encryption at rest and in transit for cloud deployments;
+- document confidentiality by default;
 - private file storage;
 - auditability;
-- safer error messages;
+- error messages that do not leak sensitive document content;
+- future retention and deletion rules;
 - secure cloud configuration.
 
 Security should be added progressively, but document confidentiality must guide
 technical choices from the beginning.
+
+## Reliability and High Availability
+
+The local MVP is not highly available. It is designed to validate the product flow
+on one developer machine.
+
+The cloud target should allow multiple backend instances over time. To prepare for
+that, backend code should move toward stateless request handling, with persistent
+state kept in managed services such as a database and object storage.
+
+Future reliability work should include health checks, backups, restore procedures,
+and a background worker for long or retryable document processing tasks.
 
 ## Observability and Operations
 

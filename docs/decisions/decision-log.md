@@ -59,8 +59,9 @@ Keep the MVP and V1 as a modular monolith:
 
 - FastAPI backend with simple modules;
 - Next.js frontend with limited fragmentation;
-- SQLite first, with PostgreSQL as the likely future production database;
-- local file storage first, with Azure Blob Storage as the likely future object
+- SQLite and local file storage for the local MVP;
+- PostgreSQL as the likely future production database;
+- Azure Blob Storage as the likely future object
   storage target;
 - synchronous PDF processing for now, with background workers introduced only when
   processing time, retries, or reliability require them.
@@ -79,3 +80,6 @@ clear replacement points for database, storage, security, and processing changes
 Architecture work should focus on clear module boundaries, human maintainability,
 document privacy, understandable errors, and progressive hardening. Future cloud
 work should extend these boundaries instead of replacing the whole application.
+
+The current MVP stores proposed file names and folders as metadata. Physical file
+renaming or moving can be added later without changing the core product flow.

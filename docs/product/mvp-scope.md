@@ -2,7 +2,8 @@
 
 ## Product vision
 
-KlearIO helps users organize administrative documents without having to manually rename, classify, and search through files.
+KlearIO helps users organize administrative documents without having to manually
+choose names, folders, and search terms for every file.
 
 The product should feel simple, clear, and calm.
 
@@ -14,7 +15,7 @@ People receive many administrative documents and often do not know how to name t
 
 The MVP must solve this basic problem:
 
-> I upload a document, KlearIO understands what it is, renames it, classifies it, and makes it searchable.
+> KlearIO understands what it is, proposes a clear name and folder, and makes it searchable.
 
 ## MVP user promise
 
@@ -146,6 +147,7 @@ The MVP is successful if:
 - A document type is proposed
 - A file name is proposed
 - A folder is proposed
+- The physical file does not need to be renamed or moved yet
 - The result can be corrected
 - The document can be found later
 
