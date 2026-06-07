@@ -50,6 +50,7 @@ def test_upload_pdf_extracts_and_saves_invoice(client, tmp_path):
     assert payload["reference_number"] == "INV-123"
     assert payload["proposed_file_name"] == "2026-05-12_EDF_invoice_82-45.pdf"
     assert payload["status"] == "processed"
+    assert payload["original_filename"] == "invoice.pdf"
 
 
 def test_rejects_non_pdf(client):
@@ -88,6 +89,34 @@ def test_search_documents(client, tmp_path):
 
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+def test_public_document_responses_hide_internal_fields(client, tmp_path):
+    pdf_path = tmp_path / "invoice.pdf"
+    create_pdf(pdf_path, "EDF\nFacture\nTotal TTC: 82,45")
+
+    with pdf_path.open("rb") as pdf:
+        upload_response = client.post(
+            "/documents/upload",
+            files={"file": ("invoice.pdf", pdf, "application/pdf")},
+        )
+
+    assert upload_response.status_code == 200
+    document_id = upload_response.json()["id"]
+
+    list_response = client.get("/documents")
+    search_response = client.get("/documents/search", params={"q": "EDF"})
+    detail_response = client.get(f"/documents/{document_id}")
+
+    public_documents = [
+        upload_response.json(),
+        list_response.json()[0],
+        search_response.json()[0],
+        detail_response.json(),
+    ]
+    for document in public_documents:
+        assert "stored_file_path" not in document
+        assert "extracted_text" not in document
 
 
 def create_pdf(path: Path, text: str) -> None:

@@ -11,6 +11,23 @@ from services.text_extraction import PdfTextExtractionError, extract_text_from_p
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
+def to_public_document(document: dict) -> dict:
+    """Return the document fields exposed by the public API."""
+    return {
+        "id": document["id"],
+        "original_filename": document["original_file_name"],
+        "document_type": document["document_type"],
+        "issuer": document.get("issuer"),
+        "document_date": document.get("document_date"),
+        "amount": document.get("amount"),
+        "reference_number": document.get("reference_number"),
+        "proposed_file_name": document["proposed_file_name"],
+        "proposed_folder": document["proposed_folder"],
+        "status": document["status"],
+        "created_at": document["created_at"],
+    }
+
+
 @router.post("/upload")
 async def upload_document(file: UploadFile = File(...)) -> dict:
     file_name = file.filename or ""
@@ -42,7 +59,7 @@ async def upload_document(file: UploadFile = File(...)) -> dict:
         issuer=fields.get("issuer"),
     )
 
-    return create_document(
+    document = create_document(
         {
             "original_file_name": stored_file.original_file_name,
             "stored_file_path": str(stored_file.path),
@@ -59,16 +76,17 @@ async def upload_document(file: UploadFile = File(...)) -> dict:
             "status": "processed",
         }
     )
+    return to_public_document(document)
 
 
 @router.get("")
 def get_documents() -> list[dict]:
-    return list_documents()
+    return [to_public_document(document) for document in list_documents()]
 
 
 @router.get("/search")
 def search(q: str) -> list[dict]:
-    return search_documents(q)
+    return [to_public_document(document) for document in search_documents(q)]
 
 
 @router.get("/{document_id}")
@@ -76,4 +94,4 @@ def get_document_by_id(document_id: int) -> dict:
     document = get_document(document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
-    return document
+    return to_public_document(document)

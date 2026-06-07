@@ -4,11 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type DocumentRecord = {
   id: number;
-  original_file_name: string;
-  stored_file_path: string;
-  mime_type: string;
-  file_size: number;
-  extracted_text: string;
+  original_filename: string;
   document_type: string;
   issuer: string | null;
   document_date: string | null;
@@ -18,7 +14,6 @@ type DocumentRecord = {
   proposed_folder: string;
   status: string;
   created_at: string;
-  updated_at: string;
 };
 
 const API_BASE_URL =
