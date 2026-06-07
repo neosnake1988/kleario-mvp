@@ -1,13 +1,8 @@
-import os
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-
-BASE_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = Path(os.getenv("KLEARIO_DATA_DIR", BASE_DIR / "data"))
-DB_PATH = Path(os.getenv("KLEARIO_DB_PATH", DATA_DIR / "kleario.sqlite3"))
+from config import DATA_DIR, DB_PATH
 
 
 def get_connection() -> sqlite3.Connection:

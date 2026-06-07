@@ -1,5 +1,6 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
+from config import MAX_UPLOAD_SIZE_BYTES
 from database.db import create_document, get_document, list_documents, search_documents
 from services.document_detection import detect_document_type
 from services.field_extraction import extract_fields
@@ -9,7 +10,6 @@ from services.text_extraction import PdfTextExtractionError, extract_text_from_p
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
-MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024
 
 
 def to_public_document(document: dict) -> dict:

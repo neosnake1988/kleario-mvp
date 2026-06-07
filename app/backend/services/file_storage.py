@@ -6,9 +6,7 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-
-BASE_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_STORAGE_DIR = BASE_DIR / "storage" / "originals"
+from config import DEFAULT_STORAGE_DIR
 
 
 @dataclass(frozen=True)

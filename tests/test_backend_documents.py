@@ -29,6 +29,13 @@ def client(tmp_path, monkeypatch):
     return TestClient(app)
 
 
+def test_health_check(client):
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_upload_pdf_extracts_and_saves_invoice(client, tmp_path):
     pdf_path = tmp_path / "invoice.pdf"
     create_pdf(
