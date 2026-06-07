@@ -31,7 +31,8 @@ The current UI is mainly in `app/frontend/app/page.tsx`.
 2. The frontend sends it to `POST /documents/upload`.
 3. The backend rejects non-PDF files.
 4. The backend saves the original file locally.
-5. The backend processes the saved file and returns the created document record.
+5. The backend rejects files larger than 10 MB.
+6. The backend processes the saved file and returns the created document record.
 
 ## Text Extraction Flow
 

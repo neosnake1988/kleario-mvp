@@ -42,6 +42,14 @@ async def save_upload_file(file: UploadFile) -> StoredFile:
     )
 
 
+def delete_stored_file(stored_file: StoredFile) -> None:
+    """Delete a stored upload when processing cannot finish."""
+    try:
+        stored_file.path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def get_storage_dir() -> Path:
     """Return the local storage directory, overridable for tests."""
     return Path(os.getenv("KLEARIO_STORAGE_DIR", DEFAULT_STORAGE_DIR))

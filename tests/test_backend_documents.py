@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import fitz
 import pytest
@@ -73,6 +74,38 @@ def test_rejects_pdf_without_readable_text(client, tmp_path):
         )
 
     assert response.status_code == 400
+    assert list((tmp_path / "storage" / "originals").iterdir()) == []
+
+
+def test_rejects_pdf_over_10_mb_and_removes_stored_file(client, tmp_path):
+    pdf_path = tmp_path / "large.pdf"
+    pdf_path.write_bytes(b"%PDF-1.7\n" + b"0" * (10 * 1024 * 1024 + 1))
+
+    with pdf_path.open("rb") as pdf:
+        response = client.post(
+            "/documents/upload",
+            files={"file": ("large.pdf", pdf, "application/pdf")},
+        )
+
+    assert response.status_code == 413
+    assert response.json()["detail"] == "PDF file is too large. Maximum size is 10 MB."
+    assert list((tmp_path / "storage" / "originals").iterdir()) == []
+
+
+def test_removes_stored_file_when_database_write_fails(client, tmp_path):
+    pdf_path = tmp_path / "invoice.pdf"
+    create_pdf(pdf_path, "EDF\nFacture\nTotal TTC: 82,45")
+
+    with patch("api.documents.create_document", side_effect=RuntimeError("db failed")):
+        with pdf_path.open("rb") as pdf:
+            response = client.post(
+                "/documents/upload",
+                files={"file": ("invoice.pdf", pdf, "application/pdf")},
+            )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "The PDF could not be processed."
+    assert list((tmp_path / "storage" / "originals").iterdir()) == []
 
 
 def test_search_documents(client, tmp_path):

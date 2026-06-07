@@ -3,12 +3,13 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from database.db import create_document, get_document, list_documents, search_documents
 from services.document_detection import detect_document_type
 from services.field_extraction import extract_fields
-from services.file_storage import save_upload_file
+from services.file_storage import delete_stored_file, save_upload_file
 from services.naming import build_proposed_file_name, build_proposed_folder
 from services.text_extraction import PdfTextExtractionError, extract_text_from_pdf
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024
 
 
 def to_public_document(document: dict) -> dict:
@@ -38,44 +39,61 @@ async def upload_document(file: UploadFile = File(...)) -> dict:
 
     stored_file = await save_upload_file(file)
     try:
+        if stored_file.file_size > MAX_UPLOAD_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="PDF file is too large. Maximum size is 10 MB.",
+            )
+
         extracted_text = extract_text_from_pdf(stored_file.path)
+
+        document_type = detect_document_type(extracted_text)
+        fields = extract_fields(extracted_text)
+        proposed_file_name = build_proposed_file_name(
+            document_type=document_type,
+            original_file_name=stored_file.original_file_name,
+            issuer=fields.get("issuer"),
+            document_date=fields.get("document_date"),
+            amount=fields.get("amount"),
+        )
+        proposed_folder = build_proposed_folder(
+            document_type=document_type,
+            issuer=fields.get("issuer"),
+        )
+
+        document = create_document(
+            {
+                "original_file_name": stored_file.original_file_name,
+                "stored_file_path": str(stored_file.path),
+                "mime_type": file.content_type or "application/pdf",
+                "file_size": stored_file.file_size,
+                "extracted_text": extracted_text,
+                "document_type": document_type,
+                "issuer": fields.get("issuer"),
+                "document_date": fields.get("document_date"),
+                "amount": fields.get("amount"),
+                "reference_number": fields.get("reference_number"),
+                "proposed_file_name": proposed_file_name,
+                "proposed_folder": proposed_folder,
+                "status": "processed",
+            }
+        )
     except PdfTextExtractionError as exc:
+        delete_stored_file(stored_file)
         raise HTTPException(
             status_code=400,
             detail="The PDF is invalid or could not be read.",
         ) from exc
+    except HTTPException:
+        delete_stored_file(stored_file)
+        raise
+    except Exception as exc:
+        delete_stored_file(stored_file)
+        raise HTTPException(
+            status_code=500,
+            detail="The PDF could not be processed.",
+        ) from exc
 
-    document_type = detect_document_type(extracted_text)
-    fields = extract_fields(extracted_text)
-    proposed_file_name = build_proposed_file_name(
-        document_type=document_type,
-        original_file_name=stored_file.original_file_name,
-        issuer=fields.get("issuer"),
-        document_date=fields.get("document_date"),
-        amount=fields.get("amount"),
-    )
-    proposed_folder = build_proposed_folder(
-        document_type=document_type,
-        issuer=fields.get("issuer"),
-    )
-
-    document = create_document(
-        {
-            "original_file_name": stored_file.original_file_name,
-            "stored_file_path": str(stored_file.path),
-            "mime_type": file.content_type or "application/pdf",
-            "file_size": stored_file.file_size,
-            "extracted_text": extracted_text,
-            "document_type": document_type,
-            "issuer": fields.get("issuer"),
-            "document_date": fields.get("document_date"),
-            "amount": fields.get("amount"),
-            "reference_number": fields.get("reference_number"),
-            "proposed_file_name": proposed_file_name,
-            "proposed_folder": proposed_folder,
-            "status": "processed",
-        }
-    )
     return to_public_document(document)
 
 
