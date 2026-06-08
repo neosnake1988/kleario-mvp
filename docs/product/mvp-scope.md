@@ -45,13 +45,12 @@ For the MVP, KlearIO should be able to:
 
 ## MVP input formats
 
-The MVP should support:
+The current MVP supports:
 
-- PDF files
-- Image files if OCR is enabled
-- Word files later if simple enough
+- Text-based PDF files.
 
-For the first prototype, PDF support is enough.
+The current MVP does not support scanned PDFs, direct image or photo upload, or
+Word files. OCR can be added later when it becomes necessary.
 
 ## MVP output
 
@@ -66,6 +65,10 @@ For each uploaded document, KlearIO should produce:
 - Processing status
 - Creation date
 - Update date
+
+The API exposes only safe public metadata by default. Internal storage paths and
+full extracted text are not returned in list, search, upload, read, or update
+responses.
 
 ## Example output
 
@@ -149,12 +152,29 @@ The MVP is successful if:
 - A folder is proposed
 - The physical file does not need to be renamed or moved yet
 - The result can be corrected
+- The result can be marked as validated after human review
 - The document can be found later
+- The original PDF can be opened from the interface without exposing a local path
+
+## Current implemented scope
+
+The current MVP supports text-based PDF upload, local file storage, SQLite
+metadata storage, simple rule-based classification, simple field extraction,
+manual metadata correction, human validation, list/search/filter, and opening the
+original PDF from the frontend.
+
+It does not include OCR, direct image/photo upload, authentication, cloud storage,
+or physical renaming/moving of files.
 
 ## Explicitly out of scope
 
 The MVP does not include:
 
+- OCR
+- Direct image or photo upload
+- Authentication
+- Cloud storage
+- Physical file rename or move
 - Bank connection
 - Email connection
 - Registered mail

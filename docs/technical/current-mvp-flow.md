@@ -21,7 +21,11 @@ The Next.js frontend provides one local interface for:
 - uploading it to the backend;
 - showing the latest result;
 - listing saved documents;
-- searching stored records.
+- searching stored records;
+- filtering by document type;
+- correcting metadata;
+- marking a document as validated;
+- opening the original PDF.
 
 The current UI is mainly in `app/frontend/app/page.tsx`.
 
@@ -32,7 +36,10 @@ The current UI is mainly in `app/frontend/app/page.tsx`.
 3. The backend rejects non-PDF files.
 4. The backend saves the original file locally.
 5. The backend rejects files larger than 10 MB.
-6. The backend processes the saved file and returns the created document record.
+6. The backend processes the saved file and returns a public document record.
+
+Controlled failures return structured API errors with a stable error code and a
+human-readable message.
 
 ## Text Extraction Flow
 
@@ -67,6 +74,21 @@ and extracted fields. These values are stored as metadata only.
 
 The naming rules are in `app/backend/services/naming.py`.
 
+## Manual Correction and Validation Flow
+
+The user can edit public metadata fields from the frontend. The frontend sends the
+changes to `PATCH /documents/{id}/metadata`, and the backend stores the corrected
+metadata in SQLite.
+
+The user can also mark a reviewed document as `validated`. This updates metadata
+only; it does not rename, move, or alter the original PDF.
+
+## Original PDF Access Flow
+
+The frontend opens the original PDF with `GET /documents/{id}/file`. The backend
+looks up the stored file path internally and returns the PDF inline when possible.
+The local storage path is never exposed to the frontend.
+
 ## Local File Storage
 
 Uploaded originals are stored under `app/backend/storage/originals` by default.
@@ -87,16 +109,19 @@ listing, reading, and search are handled in `app/backend/database/db.py`.
 
 The frontend calls either `GET /documents` or `GET /documents/search?q=...`.
 The backend searches metadata and extracted text with simple SQL `LIKE` queries.
+The frontend can also apply a simple client-side document type filter.
 
 ## Current Limits
 
 - Only PDF upload is supported.
 - Only text-based PDFs are supported.
 - OCR is not implemented yet.
+- Direct image or photo upload is not supported.
 - Classification uses keyword rules.
 - Field extraction uses approximate regex rules.
 - Proposed names and folders are not applied to the physical files.
 - There is no authentication, access control, cloud storage, or background worker.
+- The local MVP is not highly available and is not production cloud storage.
 
 ## How To Change Business Rules
 

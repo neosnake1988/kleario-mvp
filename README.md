@@ -2,7 +2,8 @@
 
 KlearIO is a simple document organization assistant.
 
-The MVP focuses on helping users upload administrative documents, detect their type, extract key information, rename them automatically, classify them into folders, and search them easily.
+The MVP focuses on helping users upload administrative documents, detect their type,
+extract key information, propose a clear file name and folder, and search them easily.
 
 ## MVP goal
 
@@ -67,15 +68,21 @@ The MVP will start with a simple local-first architecture:
 
 ## Current status
 
-The repository now contains a first local prototype skeleton.
+The repository contains a working local MVP prototype.
 
-The first objective is to build a simple end-to-end prototype where a user can upload one document and receive:
+Implemented capabilities:
 
-- A detected document type
-- Extracted key fields
-- A proposed file name
-- A proposed folder
-- A searchable record
+- Upload text-based PDF files.
+- Extract readable text from PDF files.
+- Classify documents with simple rules.
+- Extract basic fields such as issuer, date, amount, and reference number.
+- Propose a file name and folder without physically renaming or moving the file.
+- Store the original PDF locally and save metadata in SQLite.
+- List, search, refresh, and filter documents in the frontend.
+- Manually correct document metadata.
+- Mark a reviewed document as validated.
+- Open the original PDF from the interface without exposing the local file path.
+- Return structured API errors for controlled backend failures.
 
 ## Architecture docs
 
@@ -116,9 +123,11 @@ at `http://localhost:8000`. This can be changed with `NEXT_PUBLIC_API_BASE_URL`.
 ## Current prototype limits
 
 - Only PDF upload is supported.
-- Only text-based PDFs are supported; scanned PDFs need OCR, which is not part of this step.
+- Only text-based PDFs are supported.
+- OCR is not implemented.
+- Direct image or photo upload is not supported.
 - Document detection uses simple keyword rules.
 - Field extraction uses approximate regex rules.
 - Proposed file names and folders are stored as metadata only.
-- Files are not physically renamed or moved into the proposed folder yet.
+- Files are not physically renamed or moved into the proposed folder.
 - There is no authentication, cloud storage, agentic workflow, or microservice architecture.
