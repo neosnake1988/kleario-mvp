@@ -37,7 +37,10 @@ export default function Home() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [latestResult, setLatestResult] = useState<DocumentRecord | null>(null);
   const [query, setQuery] = useState("");
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
+  const [documentTypeFilter, setDocumentTypeFilter] = useState("all");
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingDocumentId, setEditingDocumentId] = useState<number | null>(
     null,
@@ -45,20 +48,56 @@ export default function Home() {
   const [editForm, setEditForm] = useState<MetadataForm | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const visibleDocuments = useMemo(() => documents, [documents]);
+  const documentTypeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          documents
+            .map((document) => document.document_type)
+            .filter((documentType) => documentType.trim()),
+        ),
+      ).sort(),
+    [documents],
+  );
+
+  const visibleDocuments = useMemo(() => {
+    if (documentTypeFilter === "all") {
+      return documents;
+    }
+    return documents.filter(
+      (document) => document.document_type === documentTypeFilter,
+    );
+  }, [documentTypeFilter, documents]);
+
+  const hasSearchOrFilter =
+    activeSearchQuery.trim().length > 0 || documentTypeFilter !== "all";
 
   useEffect(() => {
     void loadDocuments();
   }, []);
 
-  async function loadDocuments() {
+  async function loadDocuments(searchQuery = activeSearchQuery) {
+    setIsLoadingDocuments(true);
     setError(null);
-    const response = await fetch(`${API_BASE_URL}/documents`);
-    if (!response.ok) {
+
+    const trimmedQuery = searchQuery.trim();
+    const url = trimmedQuery
+      ? `${API_BASE_URL}/documents/search?q=${encodeURIComponent(trimmedQuery)}`
+      : `${API_BASE_URL}/documents`;
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        setError(await getApiErrorMessage(response, "Unable to load documents."));
+        return;
+      }
+      setDocuments(await response.json());
+      setActiveSearchQuery(trimmedQuery);
+    } catch {
       setError("Unable to load documents.");
-      return;
+    } finally {
+      setIsLoadingDocuments(false);
     }
-    setDocuments(await response.json());
   }
 
   async function uploadDocument(event: FormEvent<HTMLFormElement>) {
@@ -91,24 +130,18 @@ export default function Home() {
     const result = (await response.json()) as DocumentRecord;
     setLatestResult(result);
     setSelectedFile(null);
-    await loadDocuments();
+    await loadDocuments(activeSearchQuery);
   }
 
   async function searchDocuments(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    await loadDocuments(query);
+  }
 
-    const trimmedQuery = query.trim();
-    const url = trimmedQuery
-      ? `${API_BASE_URL}/documents/search?q=${encodeURIComponent(trimmedQuery)}`
-      : `${API_BASE_URL}/documents`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      setError(await getApiErrorMessage(response, "Search failed."));
-      return;
-    }
-    setDocuments(await response.json());
+  async function resetDocuments() {
+    setQuery("");
+    setDocumentTypeFilter("all");
+    await loadDocuments("");
   }
 
   function startEditing(document: DocumentRecord) {
@@ -196,23 +229,37 @@ export default function Home() {
         </form>
 
         <form className="panel" onSubmit={searchDocuments}>
-          <h2>Search</h2>
-          <input
-            placeholder="Search by issuer, type, text..."
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <h2>Find documents</h2>
+          <label className="search-field">
+            <span>Search</span>
+            <input
+              placeholder="Issuer, type, reference, folder..."
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <label className="search-field">
+            <span>Document type</span>
+            <select
+              value={documentTypeFilter}
+              onChange={(event) => setDocumentTypeFilter(event.target.value)}
+            >
+              <option value="all">All types</option>
+              {documentTypeOptions.map((documentType) => (
+                <option key={documentType} value={documentType}>
+                  {documentType}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="button-row">
             <button type="submit">Search</button>
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                void loadDocuments();
-              }}
-            >
+            <button type="button" onClick={() => void resetDocuments()}>
               Reset
+            </button>
+            <button type="button" onClick={() => void loadDocuments()}>
+              Refresh
             </button>
           </div>
         </form>
@@ -257,36 +304,50 @@ export default function Home() {
       <section className="documents">
         <div className="section-heading">
           <h2>Documents</h2>
-          <span>{visibleDocuments.length} saved</span>
+          <span>{documents.length} saved</span>
         </div>
+        {activeSearchQuery ? (
+          <p className="list-context">Search results for "{activeSearchQuery}"</p>
+        ) : null}
         <div className="document-list">
-          {visibleDocuments.map((document) => (
-            <article className="document-card" key={document.id}>
-              <h3>{document.proposed_file_name}</h3>
-              {editingDocumentId === document.id &&
-              latestResult?.id !== document.id &&
-              editForm ? (
-                <MetadataEditForm
-                  form={editForm}
-                  isSaving={isSaving}
-                  onCancel={cancelEditing}
-                  onChange={updateEditField}
-                  onSave={() => void saveMetadata(document.id)}
-                />
-              ) : (
-                <>
-                  <DocumentDetails document={document} compact />
-                  <div className="metadata-actions">
-                    <button type="button" onClick={() => startEditing(document)}>
-                      Edit
-                    </button>
-                  </div>
-                </>
-              )}
-            </article>
-          ))}
-          {visibleDocuments.length === 0 ? (
-            <p className="empty">No documents yet.</p>
+          {isLoadingDocuments ? (
+            <p className="empty">Loading documents...</p>
+          ) : (
+            visibleDocuments.map((document) => (
+              <article className="document-card" key={document.id}>
+                <div className="document-card-heading">
+                  <h3>{document.proposed_file_name}</h3>
+                  <span>{formatValue(document.document_type)}</span>
+                </div>
+                {editingDocumentId === document.id &&
+                latestResult?.id !== document.id &&
+                editForm ? (
+                  <MetadataEditForm
+                    form={editForm}
+                    isSaving={isSaving}
+                    onCancel={cancelEditing}
+                    onChange={updateEditField}
+                    onSave={() => void saveMetadata(document.id)}
+                  />
+                ) : (
+                  <>
+                    <DocumentDetails document={document} compact />
+                    <div className="metadata-actions">
+                      <button type="button" onClick={() => startEditing(document)}>
+                        Edit
+                      </button>
+                    </div>
+                  </>
+                )}
+              </article>
+            ))
+          )}
+          {!isLoadingDocuments && visibleDocuments.length === 0 ? (
+            <p className="empty">
+              {hasSearchOrFilter
+                ? "No documents match this search."
+                : "No documents yet."}
+            </p>
           ) : null}
         </div>
       </section>
