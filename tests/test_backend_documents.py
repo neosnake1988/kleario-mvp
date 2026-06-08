@@ -193,6 +193,42 @@ def test_update_document_metadata_rejects_internal_fields(client, tmp_path):
         )
 
 
+def test_get_document_file_returns_pdf(client, tmp_path):
+    document = upload_invoice(client, tmp_path)
+
+    response = client.get(f"/documents/{document['id']}/file")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.content.startswith(b"%PDF")
+
+
+def test_get_document_file_returns_not_found_for_missing_document(client):
+    response = client.get("/documents/999/file")
+
+    assert response.status_code == 404
+    assert_api_error(response, "DOCUMENT_NOT_FOUND", "Document not found")
+
+
+def test_get_document_file_returns_error_when_physical_file_is_missing(
+    client,
+    tmp_path,
+):
+    document = upload_invoice(client, tmp_path)
+    storage_dir = tmp_path / "storage" / "originals"
+    for stored_file in storage_dir.iterdir():
+        stored_file.unlink()
+
+    response = client.get(f"/documents/{document['id']}/file")
+
+    assert response.status_code == 404
+    assert_api_error(
+        response,
+        "DOCUMENT_FILE_NOT_FOUND",
+        "Original document file was not found.",
+    )
+
+
 def test_search_documents(client, tmp_path):
     pdf_path = tmp_path / "invoice.pdf"
     create_pdf(pdf_path, "EDF\nFacture\nTotal TTC: 82,45")

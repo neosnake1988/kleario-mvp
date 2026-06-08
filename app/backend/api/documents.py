@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from api.errors import api_error
 from config import MAX_UPLOAD_SIZE_BYTES
@@ -142,6 +144,27 @@ def patch_document_metadata(
     if document is None:
         raise api_error(404, "DOCUMENT_NOT_FOUND", "Document not found")
     return to_public_document(document)
+
+
+@router.get("/{document_id}/file")
+def get_document_file(document_id: int) -> FileResponse:
+    document = get_document(document_id)
+    if document is None:
+        raise api_error(404, "DOCUMENT_NOT_FOUND", "Document not found")
+
+    stored_file_path = Path(document["stored_file_path"])
+    if not stored_file_path.is_file():
+        raise api_error(
+            404,
+            "DOCUMENT_FILE_NOT_FOUND",
+            "Original document file was not found.",
+        )
+
+    return FileResponse(
+        stored_file_path,
+        media_type="application/pdf",
+        filename=document["original_file_name"],
+    )
 
 
 @router.get("/{document_id}")

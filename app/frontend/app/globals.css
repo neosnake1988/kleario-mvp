@@ -38,6 +38,10 @@ button {
   padding: 0 16px;
 }
 
+a {
+  color: var(--accent-dark);
+}
+
 button:hover {
   background: var(--accent-dark);
 }
@@ -140,6 +144,7 @@ h3 {
 }
 
 .button-row button,
+.metadata-actions a,
 .metadata-actions button {
   width: fit-content;
 }
@@ -273,9 +278,18 @@ h3 {
 
 .metadata-actions {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 16px;
+}
+
+.metadata-actions a {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-height: 42px;
+  padding: 11px 14px;
+  text-decoration: none;
 }
 
 .empty {

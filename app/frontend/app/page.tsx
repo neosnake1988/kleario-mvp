@@ -292,6 +292,13 @@ export default function Home() {
             <>
               <DocumentDetails document={latestResult} />
               <div className="metadata-actions">
+                <a
+                  href={originalDocumentUrl(latestResult)}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Open original document
+                </a>
                 <button type="button" onClick={() => startEditing(latestResult)}>
                   Edit
                 </button>
@@ -331,11 +338,18 @@ export default function Home() {
                   />
                 ) : (
                   <>
-                    <DocumentDetails document={document} compact />
-                    <div className="metadata-actions">
-                      <button type="button" onClick={() => startEditing(document)}>
-                        Edit
-                      </button>
+                  <DocumentDetails document={document} compact />
+                  <div className="metadata-actions">
+                    <a
+                      href={originalDocumentUrl(document)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Open original document
+                    </a>
+                    <button type="button" onClick={() => startEditing(document)}>
+                      Edit
+                    </button>
                     </div>
                   </>
                 )}
@@ -536,6 +550,10 @@ function toMetadataPayload(form: MetadataForm) {
 function optionalValue(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+function originalDocumentUrl(document: DocumentRecord) {
+  return `${API_BASE_URL}/documents/${document.id}/file`;
 }
 
 async function getApiErrorMessage(response: Response, fallback: string) {

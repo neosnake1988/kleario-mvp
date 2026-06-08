@@ -1,0 +1,9 @@
+warning: in the working copy of 'app/backend/api/documents.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/frontend/app/globals.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/frontend/app/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_backend_documents.py', LF will be replaced by CRLF the next time Git touches it
+ app/backend/api/documents.py    | 23 [32m+++++++++++++++++++++++[m
+ app/frontend/app/globals.css    | 14 [32m++++++++++++++[m
+ app/frontend/app/page.tsx       | 28 [32m+++++++++++++++++++++++[m[31m-----[m
+ tests/test_backend_documents.py | 36 [32m++++++++++++++++++++++++++++++++++++[m
+ 4 files changed, 96 insertions(+), 5 deletions(-)
