@@ -189,6 +189,36 @@ export default function Home() {
     }
 
     const updatedDocument = (await response.json()) as DocumentRecord;
+    updateDocumentState(updatedDocument);
+    cancelEditing();
+  }
+
+  async function markAsValidated(documentId: number) {
+    setIsSaving(true);
+    setError(null);
+
+    const response = await fetch(
+      `${API_BASE_URL}/documents/${documentId}/metadata`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "validated" }),
+      },
+    );
+
+    setIsSaving(false);
+
+    if (!response.ok) {
+      setError(
+        await getApiErrorMessage(response, "Document could not be validated."),
+      );
+      return;
+    }
+
+    updateDocumentState((await response.json()) as DocumentRecord);
+  }
+
+  function updateDocumentState(updatedDocument: DocumentRecord) {
     setDocuments((current) =>
       current.map((document) =>
         document.id === updatedDocument.id ? updatedDocument : document,
@@ -197,7 +227,6 @@ export default function Home() {
     setLatestResult((current) =>
       current?.id === updatedDocument.id ? updatedDocument : current,
     );
-    cancelEditing();
   }
 
   return (
@@ -242,6 +271,7 @@ export default function Home() {
           onCancel={cancelEditing}
           onChange={updateEditField}
           onEdit={() => startEditing(latestResult)}
+          onMarkAsValidated={() => void markAsValidated(latestResult.id)}
           onSave={() => void saveMetadata(latestResult.id)}
         />
       ) : null}
@@ -271,6 +301,7 @@ export default function Home() {
                 onCancel={cancelEditing}
                 onChange={updateEditField}
                 onEdit={() => startEditing(document)}
+                onMarkAsValidated={() => void markAsValidated(document.id)}
                 onSave={() => void saveMetadata(document.id)}
               />
             ))
@@ -378,6 +409,7 @@ function LatestResultPanel({
   onCancel,
   onChange,
   onEdit,
+  onMarkAsValidated,
   onSave,
 }: {
   document: DocumentRecord;
@@ -387,6 +419,7 @@ function LatestResultPanel({
   onCancel: () => void;
   onChange: (field: MetadataField, value: string) => void;
   onEdit: () => void;
+  onMarkAsValidated: () => void;
   onSave: () => void;
 }) {
   return (
@@ -413,7 +446,12 @@ function LatestResultPanel({
       ) : (
         <>
           <DocumentDetails document={document} />
-          <DocumentActions document={document} onEdit={onEdit} />
+          <DocumentActions
+            document={document}
+            isSaving={isSaving}
+            onEdit={onEdit}
+            onMarkAsValidated={onMarkAsValidated}
+          />
         </>
       )}
     </section>
@@ -428,6 +466,7 @@ function DocumentCard({
   onCancel,
   onChange,
   onEdit,
+  onMarkAsValidated,
   onSave,
 }: {
   document: DocumentRecord;
@@ -437,6 +476,7 @@ function DocumentCard({
   onCancel: () => void;
   onChange: (field: MetadataField, value: string) => void;
   onEdit: () => void;
+  onMarkAsValidated: () => void;
   onSave: () => void;
 }) {
   return (
@@ -456,7 +496,12 @@ function DocumentCard({
       ) : (
         <>
           <DocumentDetails document={document} compact />
-          <DocumentActions document={document} onEdit={onEdit} />
+          <DocumentActions
+            document={document}
+            isSaving={isSaving}
+            onEdit={onEdit}
+            onMarkAsValidated={onMarkAsValidated}
+          />
         </>
       )}
     </article>
@@ -465,10 +510,14 @@ function DocumentCard({
 
 function DocumentActions({
   document,
+  isSaving,
   onEdit,
+  onMarkAsValidated,
 }: {
   document: DocumentRecord;
+  isSaving: boolean;
   onEdit: () => void;
+  onMarkAsValidated: () => void;
 }) {
   return (
     <div className="metadata-actions">
@@ -478,6 +527,11 @@ function DocumentActions({
       <button type="button" onClick={onEdit}>
         Edit
       </button>
+      {document.status !== "validated" ? (
+        <button disabled={isSaving} type="button" onClick={onMarkAsValidated}>
+          Mark as validated
+        </button>
+      ) : null}
     </div>
   );
 }
