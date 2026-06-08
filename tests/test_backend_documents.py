@@ -200,6 +200,7 @@ def test_get_document_file_returns_pdf(client, tmp_path):
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
+    assert response.headers["content-disposition"].startswith("inline")
     assert response.content.startswith(b"%PDF")
 
 

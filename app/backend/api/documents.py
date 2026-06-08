@@ -164,6 +164,7 @@ def get_document_file(document_id: int) -> FileResponse:
         stored_file_path,
         media_type="application/pdf",
         filename=document["original_file_name"],
+        content_disposition_type="inline",
     )
 
 
