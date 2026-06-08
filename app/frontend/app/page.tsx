@@ -214,98 +214,36 @@ export default function Home() {
       </section>
 
       <section className="panel-grid">
-        <form className="panel" onSubmit={uploadDocument}>
-          <h2>Upload PDF</h2>
-          <input
-            accept="application/pdf"
-            type="file"
-            onChange={(event) =>
-              setSelectedFile(event.target.files?.item(0) ?? null)
-            }
-          />
-          <button disabled={isUploading} type="submit">
-            {isUploading ? "Processing..." : "Upload and process"}
-          </button>
-        </form>
-
-        <form className="panel" onSubmit={searchDocuments}>
-          <h2>Find documents</h2>
-          <label className="search-field">
-            <span>Search</span>
-            <input
-              placeholder="Issuer, type, reference, folder..."
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          <label className="search-field">
-            <span>Document type</span>
-            <select
-              value={documentTypeFilter}
-              onChange={(event) => setDocumentTypeFilter(event.target.value)}
-            >
-              <option value="all">All types</option>
-              {documentTypeOptions.map((documentType) => (
-                <option key={documentType} value={documentType}>
-                  {documentType}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="button-row">
-            <button type="submit">Search</button>
-            <button type="button" onClick={() => void resetDocuments()}>
-              Reset
-            </button>
-            <button type="button" onClick={() => void loadDocuments()}>
-              Refresh
-            </button>
-          </div>
-        </form>
+        <UploadPanel
+          isUploading={isUploading}
+          onFileChange={setSelectedFile}
+          onSubmit={uploadDocument}
+        />
+        <DocumentSearchControls
+          documentTypeFilter={documentTypeFilter}
+          documentTypeOptions={documentTypeOptions}
+          onDocumentTypeFilterChange={setDocumentTypeFilter}
+          onQueryChange={setQuery}
+          onRefresh={() => void loadDocuments()}
+          onReset={() => void resetDocuments()}
+          onSearch={searchDocuments}
+          query={query}
+        />
       </section>
 
       {error ? <p className="error">{error}</p> : null}
 
       {latestResult ? (
-        <section className="result">
-          <div className="result-heading">
-            <div>
-              <p className="eyebrow">Processing result</p>
-              <h2>Suggested classification</h2>
-            </div>
-            <span>{latestResult.status}</span>
-          </div>
-          <p className="result-note">
-            KlearIO has proposed a file name and folder. The file has not been
-            physically renamed or moved yet.
-          </p>
-          {editingDocumentId === latestResult.id && editForm ? (
-            <MetadataEditForm
-              form={editForm}
-              isSaving={isSaving}
-              onCancel={cancelEditing}
-              onChange={updateEditField}
-              onSave={() => void saveMetadata(latestResult.id)}
-            />
-          ) : (
-            <>
-              <DocumentDetails document={latestResult} />
-              <div className="metadata-actions">
-                <a
-                  href={originalDocumentUrl(latestResult)}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  Open original document
-                </a>
-                <button type="button" onClick={() => startEditing(latestResult)}>
-                  Edit
-                </button>
-              </div>
-            </>
-          )}
-        </section>
+        <LatestResultPanel
+          document={latestResult}
+          editForm={editForm}
+          isEditing={editingDocumentId === latestResult.id}
+          isSaving={isSaving}
+          onCancel={cancelEditing}
+          onChange={updateEditField}
+          onEdit={() => startEditing(latestResult)}
+          onSave={() => void saveMetadata(latestResult.id)}
+        />
       ) : null}
 
       <section className="documents">
@@ -321,39 +259,20 @@ export default function Home() {
             <p className="empty">Loading documents...</p>
           ) : (
             visibleDocuments.map((document) => (
-              <article className="document-card" key={document.id}>
-                <div className="document-card-heading">
-                  <h3>{document.proposed_file_name}</h3>
-                  <span>{formatValue(document.document_type)}</span>
-                </div>
-                {editingDocumentId === document.id &&
-                latestResult?.id !== document.id &&
-                editForm ? (
-                  <MetadataEditForm
-                    form={editForm}
-                    isSaving={isSaving}
-                    onCancel={cancelEditing}
-                    onChange={updateEditField}
-                    onSave={() => void saveMetadata(document.id)}
-                  />
-                ) : (
-                  <>
-                  <DocumentDetails document={document} compact />
-                  <div className="metadata-actions">
-                    <a
-                      href={originalDocumentUrl(document)}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      Open original document
-                    </a>
-                    <button type="button" onClick={() => startEditing(document)}>
-                      Edit
-                    </button>
-                    </div>
-                  </>
-                )}
-              </article>
+              <DocumentCard
+                document={document}
+                editForm={editForm}
+                isEditing={
+                  editingDocumentId === document.id &&
+                  latestResult?.id !== document.id
+                }
+                isSaving={isSaving}
+                key={document.id}
+                onCancel={cancelEditing}
+                onChange={updateEditField}
+                onEdit={() => startEditing(document)}
+                onSave={() => void saveMetadata(document.id)}
+              />
             ))
           )}
           {!isLoadingDocuments && visibleDocuments.length === 0 ? (
@@ -366,6 +285,200 @@ export default function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+function UploadPanel({
+  isUploading,
+  onFileChange,
+  onSubmit,
+}: {
+  isUploading: boolean;
+  onFileChange: (file: File | null) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <form className="panel" onSubmit={onSubmit}>
+      <h2>Upload PDF</h2>
+      <input
+        accept="application/pdf"
+        type="file"
+        onChange={(event) => onFileChange(event.target.files?.item(0) ?? null)}
+      />
+      <button disabled={isUploading} type="submit">
+        {isUploading ? "Processing..." : "Upload and process"}
+      </button>
+    </form>
+  );
+}
+
+function DocumentSearchControls({
+  documentTypeFilter,
+  documentTypeOptions,
+  onDocumentTypeFilterChange,
+  onQueryChange,
+  onRefresh,
+  onReset,
+  onSearch,
+  query,
+}: {
+  documentTypeFilter: string;
+  documentTypeOptions: string[];
+  onDocumentTypeFilterChange: (value: string) => void;
+  onQueryChange: (value: string) => void;
+  onRefresh: () => void;
+  onReset: () => void;
+  onSearch: (event: FormEvent<HTMLFormElement>) => void;
+  query: string;
+}) {
+  return (
+    <form className="panel" onSubmit={onSearch}>
+      <h2>Find documents</h2>
+      <label className="search-field">
+        <span>Search</span>
+        <input
+          placeholder="Issuer, type, reference, folder..."
+          type="search"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
+      </label>
+      <label className="search-field">
+        <span>Document type</span>
+        <select
+          value={documentTypeFilter}
+          onChange={(event) => onDocumentTypeFilterChange(event.target.value)}
+        >
+          <option value="all">All types</option>
+          {documentTypeOptions.map((documentType) => (
+            <option key={documentType} value={documentType}>
+              {documentType}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="button-row">
+        <button type="submit">Search</button>
+        <button type="button" onClick={onReset}>
+          Reset
+        </button>
+        <button type="button" onClick={onRefresh}>
+          Refresh
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function LatestResultPanel({
+  document,
+  editForm,
+  isEditing,
+  isSaving,
+  onCancel,
+  onChange,
+  onEdit,
+  onSave,
+}: {
+  document: DocumentRecord;
+  editForm: MetadataForm | null;
+  isEditing: boolean;
+  isSaving: boolean;
+  onCancel: () => void;
+  onChange: (field: MetadataField, value: string) => void;
+  onEdit: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <section className="result">
+      <div className="result-heading">
+        <div>
+          <p className="eyebrow">Processing result</p>
+          <h2>Suggested classification</h2>
+        </div>
+        <span>{document.status}</span>
+      </div>
+      <p className="result-note">
+        KlearIO has proposed a file name and folder. The file has not been
+        physically renamed or moved yet.
+      </p>
+      {isEditing && editForm ? (
+        <MetadataEditForm
+          form={editForm}
+          isSaving={isSaving}
+          onCancel={onCancel}
+          onChange={onChange}
+          onSave={onSave}
+        />
+      ) : (
+        <>
+          <DocumentDetails document={document} />
+          <DocumentActions document={document} onEdit={onEdit} />
+        </>
+      )}
+    </section>
+  );
+}
+
+function DocumentCard({
+  document,
+  editForm,
+  isEditing,
+  isSaving,
+  onCancel,
+  onChange,
+  onEdit,
+  onSave,
+}: {
+  document: DocumentRecord;
+  editForm: MetadataForm | null;
+  isEditing: boolean;
+  isSaving: boolean;
+  onCancel: () => void;
+  onChange: (field: MetadataField, value: string) => void;
+  onEdit: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <article className="document-card">
+      <div className="document-card-heading">
+        <h3>{document.proposed_file_name}</h3>
+        <span>{formatValue(document.document_type)}</span>
+      </div>
+      {isEditing && editForm ? (
+        <MetadataEditForm
+          form={editForm}
+          isSaving={isSaving}
+          onCancel={onCancel}
+          onChange={onChange}
+          onSave={onSave}
+        />
+      ) : (
+        <>
+          <DocumentDetails document={document} compact />
+          <DocumentActions document={document} onEdit={onEdit} />
+        </>
+      )}
+    </article>
+  );
+}
+
+function DocumentActions({
+  document,
+  onEdit,
+}: {
+  document: DocumentRecord;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="metadata-actions">
+      <a href={originalDocumentUrl(document)} rel="noreferrer" target="_blank">
+        Open original document
+      </a>
+      <button type="button" onClick={onEdit}>
+        Edit
+      </button>
+    </div>
   );
 }
 
